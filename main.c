@@ -67,6 +67,9 @@ int main(int argc, char *argv[])
 	if (fp != stdin) {
 		fclose(fp);
 	}
+	if (ret == 0) {
+		ret = runner->quit(runner);
+	}
 	runner->destroy(runner);
 	return ret;
 }

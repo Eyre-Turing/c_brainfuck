@@ -14,7 +14,7 @@ struct brainfuck_context {
 	char *code;
 	unsigned long long code_used;
 	unsigned long long code_size;
-	unsigned long long end_depth;	// like [] or [][] is 1, [[]] is 2
+	long long end_depth;	// like [] or [][] is 1, [[]] is 2
 	unsigned long long code_pos;	// current code position to run
 };
 
@@ -185,6 +185,10 @@ static int brainfuck_add(struct brainfuck_runner *runner, char c)
 	} else if (c == ']') {
 		--(runner->ctx->end_depth);
 	}
+	if (runner->ctx->end_depth < 0) {
+		fprintf(stderr, "[kernel] add code found single ], it mast had a [ ahead ]!\n");
+		return 1;
+	}
 	if (runner->ctx->end_depth) {	// scan loop code, do not run until get peer ]
 		return 0;
 	}
@@ -193,6 +197,11 @@ static int brainfuck_add(struct brainfuck_runner *runner, char c)
 	}
 	
 	return ret;
+}
+
+static int brainfuck_quit(struct brainfuck_runner *runner)
+{
+	return (runner->ctx->end_depth != 0);
 }
 
 struct brainfuck_runner *brainfuck_new()
@@ -205,6 +214,7 @@ struct brainfuck_runner *brainfuck_new()
 	}
 	runner->add = brainfuck_add;
 	runner->destroy = brainfuck_delete;
+	runner->quit = brainfuck_quit;
 	
 	struct brainfuck_context *ctx = (struct brainfuck_context *)
 		malloc(sizeof(struct brainfuck_context));
@@ -251,6 +261,9 @@ int brainfuck_exec(const char *code)
 		if (ret = runner->add(runner, *p)) {
 			break;
 		}
+	}
+	if (ret == 0) {
+		ret = runner->quit(runner);
 	}
 	runner->destroy(runner);
 	return ret;
