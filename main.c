@@ -20,24 +20,30 @@ int main(int argc, char *argv[])
 	FILE *fp = stdin;
 	char b;
 	brainfuck_runner *runner = NULL;
+	int execflag = 0;
 	int ret = 0;
 	for (i = 1; i < argc; ++i) {
+		if (execflag) {
+			execflag = 0;
+			code_text = argv[i];
+			continue;
+		}
 		if (argv[i][0] != '-') {
 			strcpy(code_filename, argv[i]);
 			continue;
 		}
 		if (strcmp(argv[i], "-c") == 0) {
-			if (++i >= argc) {
-				fprintf(stderr, "-c need a code text!\n");
-				return 1;
-			}
-			code_text = argv[i];
+			execflag = 1;
 		} else if (strcmp(argv[i], "-h") == 0 || 
 			strcmp(argv[i], "--help") == 0 || 
 			strcmp(argv[i], "-?") == 0 ) {
 			usage();
 			return 0;
 		}
+	}
+	if (execflag) {
+		fprintf(stderr, "-c need a code text!\n");
+		return 1;
 	}
 	if (code_text) {
 		// exec code_text
