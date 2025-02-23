@@ -2,7 +2,9 @@ BrainFuck解释器
 
 # 编译方法
 
-gcc main.c brainfuck.c -o bf
+```bash
+make
+```
 
 # 使用方法
 
@@ -12,8 +14,16 @@ gcc main.c brainfuck.c -o bf
 
 `./bf <bf代码文件>`运行bf代码文件
 
+直接执行`./bf`将从标准输入读取bf代码
+
+支持使用`-o <输出文件名>`来把bf代码编译成可执行文件
+
 # 例子
 
-在编译出bf可执行文件后，你可以试着执行`./bf bfcodes/helloworld.bf`或者`./bf bfcodes/a_add_b.bf`
+在编译出bf可执行文件后，你可以试着执行`./bf bfcodes/helloworld.bf`或者`./bf bfcodes/a_add_b.bf`，也可以通过-c传递代码给bf，如`./bf -c ',[.,]'`(这是一个复读机，你输入什么它就输出什么)
+
+你可以像这样`./bf bfcodes/helloworld.bf -o helloworld`编译bf代码为可执行文件，也可以通过-c传递代码给bf，如`bf -o repeater -c ',[.,]'`将会把复读机编译成可执行文件
+
+你也可以什么参数都不指定，这样它就会从标准输入读你的代码（要注意，如果你是以解释器运行，且代码里有`,`，这个时候你`,`的下一个输入就会被bf执行读到）。如`./bf -o repeater`，然后在标准输入里输入`,[.,]`，然后按ctrl + d结束标准输入，这样就会编译出一个复读机
 
 bfcodes文件夹里就是brainfuck示例代码
