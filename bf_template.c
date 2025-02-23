@@ -70,7 +70,7 @@ int check_expand()
 			return 0;
 		}
 		new_size = b_mem_size * 2;
-		while (new_size < ptr) {
+		while (new_size < -ptr) {
 			new_size *= 2;
 		}
 		mem_tmp = (char *) realloc(b_mem, new_size * sizeof(char));
