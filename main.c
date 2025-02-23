@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 
 		remove(tmp_c_file);
 
-		return ret;
+		return ret >> 8;
 	}
 
 	runner = brainfuck_new();
