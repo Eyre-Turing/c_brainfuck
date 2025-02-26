@@ -4,6 +4,10 @@
 #include "brainfuck.h"
 #include "bf_compile.h"
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 void usage(char *self)
 {
 	printf("Usage:\n"
@@ -88,7 +92,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (compile_out) {
+		#ifdef _WIN32
+		strcpy(tmp_c_file, "tmp_XXXXXX");
+		_mktemp(tmp_c_file);
+		strcat(tmp_c_file, ".c");
+		#else
 		mkstemps(tmp_c_file, 2);
+		#endif
 
 		tmp_c_fp = fopen(tmp_c_file, "wb");
 

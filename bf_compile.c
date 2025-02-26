@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32) && !defined(_WIN64)
+	#define _binary_bf_template_c_start	binary_bf_template_c_start
+	#define _binary_bf_template_c_end	binary_bf_template_c_end
+#endif
+
 extern char _binary_bf_template_c_start[];
 extern char _binary_bf_template_c_end[];
 
