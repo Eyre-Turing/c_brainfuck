@@ -1,5 +1,5 @@
 bf
 main
 *.exe
-*.bf
+/*.bf
 *.o
