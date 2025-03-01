@@ -6,6 +6,10 @@
 
 #ifdef _WIN32
 #include <io.h>
+#define WEXITSTATUS(status) status
+#else
+#include <sys/types.h>
+#include <sys/wait.h>
 #endif
 
 void usage(char *self)
@@ -148,7 +152,7 @@ int main(int argc, char *argv[])
 
 		remove(tmp_c_file);
 
-		return ret >> 8;
+		return WEXITSTATUS(ret);
 	}
 
 	runner = brainfuck_new();
