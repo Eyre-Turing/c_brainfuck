@@ -24,8 +24,11 @@ void usage(char *self)
 			"  -h | --help | -?          show this message and exit.\n"
 			"  -c <brainfuck-code-text>  exec a brainfuck code as command.\n"
 			"  <brainfuck-code-file>     run a brainfuck code file.\n"
-			"  -o <out>                  compile into an executable file.\n",
-			self, self, self);
+			"  -o <out>                  compile into an executable file.\n"
+			#if defined(__x86_64__) || defined(_M_X64)
+			"  -S | --asm                use assemble code to compile (x86_64 Linux only)\n"
+			#endif
+			, self, self, self);
 }
 
 int main(int argc, char *argv[])
@@ -42,8 +45,11 @@ int main(int argc, char *argv[])
 
 	char *compile_out = NULL;
 	int compile_flag = 0;
+	int asm_flag = 0;
 	char tmp_c_file[260] = "tmp_XXXXXX.c";
-	FILE *tmp_c_fp;
+	char tmp_s_file[260] = "tmp_XXXXXX.s";
+	char tmp_o_file[260] = "tmp_XXXXXX.o";
+	FILE *tmp_c_fp, *tmp_s_fp;
 
 	for (i = 1; i < argc; ++i) {
 		if (execflag) {
@@ -64,7 +70,10 @@ int main(int argc, char *argv[])
 			execflag = 1;
 		} else if (strcmp(argv[i], "-o") == 0) {
 			compile_flag = 1;
-			
+		} else if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--asm") == 0) {
+			#if defined(__x86_64__) || defined(_M_X64)
+			asm_flag = 1;
+			#endif
 		} else if (strcmp(argv[i], "-h") == 0 || 
 			strcmp(argv[i], "--help") == 0 || 
 			strcmp(argv[i], "-?") == 0 ) {
@@ -96,63 +105,129 @@ int main(int argc, char *argv[])
 	}
 
 	if (compile_out) {
-		#ifdef _WIN32
-		strcpy(tmp_c_file, "tmp_XXXXXX");
-		_mktemp(tmp_c_file);
-		strcat(tmp_c_file, ".c");
-		#else
-		mkstemps(tmp_c_file, 2);
-		#endif
+		if (asm_flag) {
+			#if defined(__x86_64__) || defined(_M_X64)
 
-		tmp_c_fp = fopen(tmp_c_file, "wb");
+			mkstemps(tmp_s_file, 2);
+			mkstemps(tmp_o_file, 2);
 
-		if (bf_tr_start(tmp_c_fp) != 0) {
-			fprintf(stderr, "bf_tr_start failed!\n");
-			fclose(tmp_c_fp);
-			remove(tmp_c_file);
-			return 1;
-		}
-		if (code_text) {
-			code_text_len = strlen(code_text);
-			for (i = 0; i < code_text_len; ++i) {
-				if (bf_tr_add(tmp_c_fp, code_text[i]) != 0) {
-					fprintf(stderr, "bf_tr_add failed!\n");
-					fclose(tmp_c_fp);
-					remove(tmp_c_file);
-					return 1;
+			tmp_s_fp = fopen(tmp_s_file, "wb");
+
+			if (bf_asm_tr_start(tmp_s_fp) != 0) {
+				fprintf(stderr, "bf_asm_tr_start failed!\n");
+				fclose(tmp_s_fp);
+				remove(tmp_s_file);
+				remove(tmp_o_file);
+				return 1;
+			}
+
+			if (code_text) {
+				code_text_len = strlen(code_text);
+				for (i = 0; i < code_text_len; ++i) {
+					if (bf_asm_tr_add(tmp_s_fp, code_text[i]) != 0) {
+						fprintf(stderr, "bf_asm_tr_add failed!\n");
+						fclose(tmp_s_fp);
+						remove(tmp_s_file);
+						remove(tmp_o_file);
+						return 1;
+					}
 				}
 			}
+			else {
+				while (~fscanf(fp, "%c", &b)) {
+					if (bf_asm_tr_add(tmp_s_fp, b) != 0) {
+						fprintf(stderr, "bf_asm_tr_add failed!\n");
+						fclose(tmp_s_fp);
+						remove(tmp_s_file);
+						remove(tmp_o_file);
+						if (fp != stdin) {
+							fclose(fp);
+						}
+						return 1;
+					}
+				}
+			}
+			if (bf_asm_tr_end(tmp_s_fp) != 0) {
+				fprintf(stderr, "bf_asm_tr_end failed!\n");
+				fclose(tmp_s_fp);
+				remove(tmp_s_file);
+				remove(tmp_o_file);
+				return 1;
+			}
+
+			fclose(tmp_s_fp);
+
+			ret = asm_compile(tmp_s_file, tmp_o_file, compile_out);
+			if (ret != 0) {
+				fprintf(stderr, "compile failed!\n");
+			}
+
+			remove(tmp_s_file);
+			remove(tmp_o_file);
+
+			return WEXITSTATUS(ret);
+
+			#endif
 		}
 		else {
-			while (~fscanf(fp, "%c", &b)) {
-				if (bf_tr_add(tmp_c_fp, b) != 0) {
-					fprintf(stderr, "bf_tr_add failed!\n");
-					fclose(tmp_c_fp);
-					remove(tmp_c_file);
-					if (fp != stdin) {
-						fclose(fp);
+			#ifdef _WIN32
+			strcpy(tmp_c_file, "tmp_XXXXXX");
+			_mktemp(tmp_c_file);
+			strcat(tmp_c_file, ".c");
+			#else
+			mkstemps(tmp_c_file, 2);
+			#endif
+
+			tmp_c_fp = fopen(tmp_c_file, "wb");
+
+			if (bf_tr_start(tmp_c_fp) != 0) {
+				fprintf(stderr, "bf_tr_start failed!\n");
+				fclose(tmp_c_fp);
+				remove(tmp_c_file);
+				return 1;
+			}
+			if (code_text) {
+				code_text_len = strlen(code_text);
+				for (i = 0; i < code_text_len; ++i) {
+					if (bf_tr_add(tmp_c_fp, code_text[i]) != 0) {
+						fprintf(stderr, "bf_tr_add failed!\n");
+						fclose(tmp_c_fp);
+						remove(tmp_c_file);
+						return 1;
 					}
-					return 1;
 				}
 			}
-		}
-		if (bf_tr_end(tmp_c_fp) != 0) {
-			fprintf(stderr, "bf_tr_end failed!\n");
+			else {
+				while (~fscanf(fp, "%c", &b)) {
+					if (bf_tr_add(tmp_c_fp, b) != 0) {
+						fprintf(stderr, "bf_tr_add failed!\n");
+						fclose(tmp_c_fp);
+						remove(tmp_c_file);
+						if (fp != stdin) {
+							fclose(fp);
+						}
+						return 1;
+					}
+				}
+			}
+			if (bf_tr_end(tmp_c_fp) != 0) {
+				fprintf(stderr, "bf_tr_end failed!\n");
+				fclose(tmp_c_fp);
+				remove(tmp_c_file);
+				return 1;
+			}
+
 			fclose(tmp_c_fp);
+
+			ret = c_compile(tmp_c_file, compile_out);
+			if (ret != 0) {
+				fprintf(stderr, "compile failed!\n");
+			}
+
 			remove(tmp_c_file);
-			return 1;
+
+			return WEXITSTATUS(ret);
 		}
-
-		fclose(tmp_c_fp);
-
-		ret = c_compile(tmp_c_file, compile_out);
-		if (ret != 0) {
-			fprintf(stderr, "compile failed!\n");
-		}
-
-		remove(tmp_c_file);
-
-		return WEXITSTATUS(ret);
 	}
 
 	runner = brainfuck_new();
